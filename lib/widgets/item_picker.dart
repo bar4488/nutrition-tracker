@@ -52,6 +52,8 @@ class _ItemPickerState<T extends Model> extends State<ItemPicker<T>> {
             children: [
               TextField(
                 decoration: InputDecoration(hintText: "search"),
+                onChanged: (value) => searchContent.set(value,
+                    debounce: Duration(milliseconds: 200)),
               ),
               Expanded(
                 child: ListView.builder(
