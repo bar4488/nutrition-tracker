@@ -39,6 +39,7 @@ dependencies:
   app_platform:
     path: ../platform/dart
   path_provider: ^2.1.4
+  reactive_forms: ^17.0.1
 
 dev_dependencies:
   flutter_test:

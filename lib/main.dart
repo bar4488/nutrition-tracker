@@ -15,9 +15,9 @@ Future<AppState> getState() async {
     var file = File('${directory.path}/state.json');
     var stateString = await file.readAsString();
     var stateJson = jsonDecode(stateString);
-    return AppState.modelBase.create(stateJson);
+    return AppState.modelType.create(stateJson);
   } catch (e) {
-    return AppState.modelBase.create({
+    return AppState.modelType.create({
       "routines": [
         {
           "name": "routine a",
@@ -66,6 +66,26 @@ class MyApp extends StatelessWidget {
       home: const MyHomePage(),
     );
   }
+}
+
+Future<Model?> showCreateModelDialog(
+    BuildContext context, ModelType modelType) {
+  return showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(modelType.name),
+        content: CreateModel(
+          modelType: modelType,
+          onCreate: (model) {
+            Navigator.of(context).pop(model);
+          },
+        ),
+        actions: [],
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+      );
+    },
+  );
 }
 
 Future<String?> showTextFieldDialog(
@@ -144,24 +164,25 @@ class _MyHomePageState extends State<MyHomePage> {
               if (index == state.routines.value.length) {
                 return TextButton(
                   onPressed: () async {
-                    await showDialog(
+                    RoutineModel? model = await showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: Text(RoutineModel.modelBase.name),
-                          content:
-                              CreateModel(modelBase: RoutineModel.modelBase),
+                          title: Text(RoutineModel.modelType.name),
+                          content: CreateModel(
+                            modelType: RoutineModel.modelType,
+                            onCreate: (model) {
+                              Navigator.of(context).pop(model);
+                            },
+                          ),
                           actions: [],
                           actionsAlignment: MainAxisAlignment.spaceBetween,
                         );
                       },
                     );
-                    return;
-                    var name = await showTextFieldDialog(
-                        context, "Add Routine", "something");
-                    if (name != null) {
-                      state.routines.add(RoutineModel.modelBase
-                          .create({"name": name, "meals": []}));
+
+                    if (model != null) {
+                      state.routines.add(model);
                     }
                   },
                   child: Icon(Icons.add),
@@ -229,16 +250,10 @@ class RoutinePage extends StatelessWidget {
                   if (index == routine.meals.value.length) {
                     return TextButton(
                       onPressed: () async {
-                        var name = await showTextFieldDialog(
-                            context, "Add Routine", "something");
-                        if (name != null) {
-                          routine.meals.add(TimedMealModel.modelBase.create({
-                            "time": TimeOfDay.now(),
-                            "meal": {
-                              "name": name,
-                              "items": [],
-                            },
-                          }));
+                        Model? model = await showCreateModelDialog(
+                            context, TimedMealModel.modelType);
+                        if (model != null) {
+                          routine.meals.add(model as TimedMealModel);
                         }
                       },
                       child: Icon(Icons.add),
@@ -258,7 +273,7 @@ class RoutinePage extends StatelessWidget {
                       },
                       child: ListTile(
                         title: Hero(
-                          tag: meal,
+                          tag: meal.meal,
                           child: Text(
                             meal.meal.name.value,
                             style: Theme.of(context).textTheme.titleMedium,
@@ -328,14 +343,19 @@ class MealPage extends StatelessWidget {
                   if (index == meal.items.value.length) {
                     return TextButton(
                       onPressed: () async {
-                        var name = await showTextFieldDialog(
-                            context, "Add Meal", "something");
-                        if (name != null) {
-                          meal.items.add(FoodItemModel.modelBase.create({
-                            "name": name,
-                            "nutritionalValues": {},
-                          }));
+                        Model? model = await showCreateModelDialog(
+                            context, FoodItemModel.modelType);
+                        if (model != null) {
+                          meal.items.add(model as FoodItemModel);
                         }
+                        // var name = await showTextFieldDialog(
+                        //     context, "Add Meal", "something");
+                        // if (name != null) {
+                        //   meal.items.add(FoodItemModel.modelType.create({
+                        //     "name": name,
+                        //     "nutritionalValues": {},
+                        //   }));
+                        // }
                       },
                       child: Icon(Icons.add),
                     );

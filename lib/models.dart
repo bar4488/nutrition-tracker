@@ -1,19 +1,20 @@
 import 'package:app_platform/app_platform.dart';
 import 'package:flutter/material.dart';
 
-class FoodItemModel extends Model<FoodItemModel> {
+class FoodItemModel extends Model {
   Primitive<String> name;
-  MapType<Primitive<int>> nutritionalValues;
+  MapObject<Primitive<int>> nutritionalValues;
 
-  static final List<FieldBase> fields = [
-    FieldBase<Primitive<String>>("name", stringType),
-    FieldBase<MapType<Primitive<int>>>(
+  static final List<FieldType> fields = [
+    FieldType<Primitive<String>>("name", stringType),
+    FieldType<MapObject<Primitive<int>>>(
       "nutritionalValues",
-      MapBase<Primitive<int>>(intType),
+      MapType<Primitive<int>>(intType),
+      defaultValue: () => {},
     ),
   ];
 
-  static final ModelBase<FoodItemModel> modelBase = ModelBase(
+  static final ModelType<FoodItemModel> modelType = ModelType(
     "FoodItemModel",
     FoodItemModel.fields,
     FoodItemModel.fromFields,
@@ -21,23 +22,24 @@ class FoodItemModel extends Model<FoodItemModel> {
 
   FoodItemModel.fromFields(super.fields)
       : name = fields[0].value as Primitive<String>,
-        nutritionalValues = fields[1].value as MapType<Primitive<int>>,
-        super(base: modelBase);
+        nutritionalValues = fields[1].value as MapObject<Primitive<int>>,
+        super(type: modelType);
 }
 
-class MealModel extends Model<MealModel> {
+class MealModel extends Model {
   Primitive<String> name;
-  ListType<FoodItemModel> items;
+  ListObject<FoodItemModel> items;
 
-  static final List<FieldBase> fields = [
-    FieldBase<Primitive<String>>("name", stringType),
-    FieldBase<ListType<FoodItemModel>>(
+  static final List<FieldType> fields = [
+    FieldType<Primitive<String>>("name", stringType),
+    FieldType<ListObject<FoodItemModel>>(
       "items",
-      ListBase<FoodItemModel>(FoodItemModel.modelBase),
+      ListType<FoodItemModel>(FoodItemModel.modelType),
+      defaultValue: () => [],
     ),
   ];
 
-  static final ModelBase<MealModel> modelBase = ModelBase(
+  static final ModelType<MealModel> modelType = ModelType(
     "MealModel",
     MealModel.fields,
     MealModel.fromFields,
@@ -45,26 +47,28 @@ class MealModel extends Model<MealModel> {
 
   MealModel.fromFields(super.fields)
       : name = fields[0].value as Primitive<String>,
-        items = fields[1].value as ListType<FoodItemModel>,
-        super(base: modelBase);
+        items = fields[1].value as ListObject<FoodItemModel>,
+        super(type: modelType);
 }
 
-class TimedMealModel extends Model<TimedMealModel> {
+class TimedMealModel extends Model {
   MealModel meal;
   Primitive<TimeOfDay> time;
 
-  static final List<FieldBase> fields = [
-    FieldBase<MealModel>("meal", MealModel.modelBase),
-    FieldBase<Primitive<TimeOfDay>>(
-        "time",
-        SerializedBase<TimeOfDay>(
-          (value) => value.hour * 60 + value.minute,
-          (value) => TimeOfDay(hour: value ~/ 60, minute: value % 60),
-          (value) => value is int,
-        )),
+  static final List<FieldType> fields = [
+    FieldType<MealModel>("meal", MealModel.modelType),
+    FieldType<Primitive<TimeOfDay>>(
+      "time",
+      SerializedType<TimeOfDay>(
+        (value) => value.hour * 60 + value.minute,
+        (value) => TimeOfDay(hour: value ~/ 60, minute: value % 60),
+        (value) => value is int,
+      ),
+      defaultValue: () => TimeOfDay.now(),
+    ),
   ];
 
-  static final ModelBase<TimedMealModel> modelBase = ModelBase(
+  static final ModelType<TimedMealModel> modelType = ModelType(
     "TimedMealModel",
     TimedMealModel.fields,
     TimedMealModel.fromFields,
@@ -73,50 +77,54 @@ class TimedMealModel extends Model<TimedMealModel> {
   TimedMealModel.fromFields(super.fields)
       : meal = fields[0].value as MealModel,
         time = fields[1].value as Primitive<TimeOfDay>,
-        super(base: modelBase);
+        super(type: modelType);
 }
 
-class RoutineModel extends Model<RoutineModel> {
+class RoutineModel extends Model {
   Primitive<String> name;
-  ListType<TimedMealModel> meals;
+  ListObject<TimedMealModel> meals;
 
   // boilerplate
-  static final List<FieldBase> fields = [
-    FieldBase<ListType<TimedMealModel>>(
+  static final List<FieldType> fields = [
+    FieldType<ListObject<TimedMealModel>>(
       "meals",
-      ListBase<TimedMealModel>(TimedMealModel.modelBase),
+      ListType<TimedMealModel>(TimedMealModel.modelType),
+      defaultValue: () => [],
     ),
-    FieldBase<Primitive<String>>("name", stringType)
+    FieldType<Primitive<String>>("name", stringType)
   ];
 
-  static final ModelBase<RoutineModel> modelBase = ModelBase(
+  static final ModelType<RoutineModel> modelType = ModelType(
     "RoutineModel",
     RoutineModel.fields,
     RoutineModel.fromFields,
   );
 
   RoutineModel.fromFields(super.fields)
-      : meals = fields[0].value as ListType<TimedMealModel>,
+      : meals = fields[0].value as ListObject<TimedMealModel>,
         name = fields[1].value as Primitive<String>,
-        super(base: modelBase);
+        super(type: modelType);
 }
 
-class AppState extends Model<AppState> {
-  ListType<RoutineModel> routines;
+class AppState extends Model {
+  ListObject<RoutineModel> routines;
 
   // boilerplate
-  static final List<FieldBase> fields = [
-    FieldBase<ListType<RoutineModel>>(
-        "routines", ListBase<RoutineModel>(RoutineModel.modelBase)),
+  static final List<FieldType> fields = [
+    FieldType<ListObject<RoutineModel>>(
+      "routines",
+      ListType<RoutineModel>(RoutineModel.modelType),
+      defaultValue: () => [],
+    ),
   ];
 
-  static final ModelBase<AppState> modelBase = ModelBase(
+  static final ModelType<AppState> modelType = ModelType(
     "State",
     AppState.fields,
     AppState.fromFields,
   );
 
   AppState.fromFields(super.fields)
-      : routines = fields[0].value as ListType<RoutineModel>,
-        super(base: modelBase);
+      : routines = fields[0].value as ListObject<RoutineModel>,
+        super(type: modelType);
 }
