@@ -6,19 +6,23 @@ import 'package:flutter/material.dart';
 import 'package:nutrition_routine/models.dart';
 import 'package:nutrition_routine/persistence.dart';
 import 'package:nutrition_routine/save_controller.dart';
+import 'package:nutrition_routine/widgets/dual_button.dart';
+import 'package:nutrition_routine/widgets/item_picker.dart';
 import 'package:nutrition_routine/widgets/model_creator.dart';
+import 'package:nutrition_routine/widgets/model_tile.dart';
 import 'package:nutrition_routine/widgets/save_button.dart';
 import 'package:path_provider/path_provider.dart';
 
-Future<AppState> getState() async {
+Future initAppState() async {
+  AppState state;
   try {
     final directory = await getApplicationDocumentsDirectory();
     var file = File('${directory.path}/state.json');
     var stateString = await file.readAsString();
     var stateJson = jsonDecode(stateString);
-    return AppState.modelType.create(stateJson);
+    state = AppState.modelType.create(stateJson);
   } catch (e) {
-    return AppState.modelType.create({
+    state = AppState.modelType.create({
       "routines": [
         {
           "name": "routine a",
@@ -27,12 +31,7 @@ Future<AppState> getState() async {
               "meal": {
                 "name": "nutty pudding",
                 "items": [
-                  {
-                    "name": "strawberries",
-                    "nutritionalValues": {
-                      "calories": 100,
-                    },
-                  }
+                  "strawberries",
                 ],
               },
               "time": 123,
@@ -40,15 +39,29 @@ Future<AppState> getState() async {
           ],
         }
       ],
+      "foodItems": [
+        {
+          "name": "strawberries",
+          "nutritionalValues": {
+            "calories": 100,
+          },
+        }
+      ]
     });
   }
+  app.initialize(state);
+}
+
+AppState getState() {
+  return app.state;
 }
 
 late AppState state;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  state = await getState();
+  await initAppState();
+  state = getState();
   var saving = false;
   state.updates().listen(
     (event) async {
@@ -95,6 +108,33 @@ Future<T?> showCreateModelDialog<T extends Model>(
         ),
         actions: [],
         actionsAlignment: MainAxisAlignment.spaceBetween,
+      );
+    },
+  );
+}
+
+Future<T?> showItemPickerDialog<T extends Model>(
+  BuildContext context,
+  ListObject<T> items,
+  String Function(T) toString,
+  Widget Function(BuildContext, T, void Function() onTap) build,
+) async {
+  return await showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text("Search"),
+        content: ConstrainedBox(
+          constraints: BoxConstraints.loose(Size.fromHeight(350)),
+          child: ItemPicker(
+            items: items,
+            itemToString: toString,
+            buildItem: build,
+            onSelect: (context, index) {
+              Navigator.of(context).pop(items.value[index]);
+            },
+          ),
+        ),
       );
     },
   );
@@ -408,7 +448,9 @@ class MealPage extends StatelessWidget {
                 itemBuilder: (context, index) {
                   if (index == meal.items.value.length + 1) {
                     Map<String, int> totals = {};
-                    for (var item in meal.items.value) {
+                    for (var item in meal.items.value
+                        .where((v) => v.value != null)
+                        .map((v) => v.value!)) {
                       for (var entry in item.nutritionalValues.value.entries) {
                         totals[entry.key] =
                             (totals[entry.key] ?? 0) + entry.value.value;
@@ -422,27 +464,51 @@ class MealPage extends StatelessWidget {
                     );
                   }
                   if (index == meal.items.value.length) {
-                    return TextButton(
-                      onPressed: () async {
-                        Model? model = await showCreateModelDialog(
-                            context, FoodItemModel.modelType);
-                        if (model != null) {
-                          meal.items.add(model as FoodItemModel);
-                        }
-                        // var name = await showTextFieldDialog(
-                        //     context, "Add Meal", "something");
-                        // if (name != null) {
-                        //   meal.items.add(FoodItemModel.modelType.create({
-                        //     "name": name,
-                        //     "nutritionalValues": {},
-                        //   }));
-                        // }
-                      },
-                      child: Icon(Icons.add),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: DualButton(
+                        onPressed1: () async {
+                          Model? model = await showCreateModelDialog(
+                              context, FoodItemModel.modelType);
+                          if (model != null) {
+                            state.foodItems.add(model as FoodItemModel);
+                            meal.items.createAndAdd(model.name.value);
+                          }
+                          // var name = await showTextFieldDialog(
+                          //     context, "Add Meal", "something");
+                          // if (name != null) {
+                          //   meal.items.add(FoodItemModel.modelType.create({
+                          //     "name": name,
+                          //     "nutritionalValues": {},
+                          //   }));
+                          // }
+                        },
+                        child1: Icon(Icons.add),
+                        onPressed2: () async {
+                          var model = await showItemPickerDialog(
+                            context,
+                            state.foodItems,
+                            (e) => e.name.value,
+                            (context, e, onTap) => SimpleCardTile(
+                              onTap: onTap,
+                              title: e.name.value,
+                            ),
+                          );
+                          if (model != null) {
+                            meal.items.createAndAdd(model.name.value);
+                          }
+                        },
+                        child2: Icon(Icons.search),
+                      ),
                     );
                   }
                   var item = meal.items.value[index];
-                  return FoodItemTile(item: item);
+                  if (item.value == null) {
+                    return SimpleCardTile(
+                      title: "Unknown food item! (${item.key})",
+                    );
+                  }
+                  return FoodItemTile(item: item.value!);
                 },
                 itemCount: meal.items.value.length + 2,
               ),
@@ -471,13 +537,13 @@ class FoodItemTile extends StatelessWidget {
           // TODO: a route that will delete in case the model is deleted (instead of material page route)
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => FoodItemPage(item: item),
+              builder: (context) => FoodItemPage(item: item, tag: this),
             ),
           );
         },
         child: ListTile(
           title: Hero(
-            tag: item,
+            tag: this,
             child: Text(
               item.name.value,
               style: Theme.of(context).textTheme.titleMedium,
@@ -493,7 +559,12 @@ class FoodItemTile extends StatelessWidget {
 
 class FoodItemPage extends StatelessWidget {
   final FoodItemModel item;
-  const FoodItemPage({super.key, required this.item});
+  final Object tag;
+  const FoodItemPage({
+    super.key,
+    required this.item,
+    required this.tag,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -504,7 +575,7 @@ class FoodItemPage extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: Hero(
-              tag: item,
+              tag: tag,
               child: Text(
                 item.name.value,
                 style: Theme.of(context).textTheme.titleLarge,

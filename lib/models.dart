@@ -1,6 +1,8 @@
 import 'package:app_platform/app_platform.dart';
 import 'package:flutter/material.dart';
 
+final app = AnApp<AppState>();
+
 class FoodItemModel extends Model {
   Primitive<String> name;
   MapObject<Primitive<int>> nutritionalValues;
@@ -27,13 +29,28 @@ class FoodItemModel extends Model {
 
 class MealModel extends Model {
   Primitive<String> name;
-  ListObject<FoodItemModel> items;
+  ListObject<ReferenceObject<FoodItemModel, String>> items;
 
   static final List<FieldType> fields = [
     FieldType<Primitive<String>>("name", stringType),
-    FieldType<ListObject<FoodItemModel>>(
+    FieldType<ListObject<ReferenceObject<FoodItemModel, String>>>(
       "items",
-      ListType<FoodItemModel>(FoodItemModel.modelType),
+      ListType<ReferenceObject<FoodItemModel, String>>(
+        ReferenceType<FoodItemModel, String>(
+          FoodItemModel.modelType,
+          app,
+          retrieve: (name, app) {
+            return (app.state as AppState)
+                .foodItems
+                .value
+                .where(
+                  (element) => element.name.value == name,
+                )
+                .firstOrNull;
+          },
+          shouldNotifyChanges: true,
+        ),
+      ),
       defaultValue: () => [],
     ),
   ];
@@ -46,7 +63,8 @@ class MealModel extends Model {
 
   MealModel.fromFields(super.fields, super.type)
       : name = fields[0].value as Primitive<String>,
-        items = fields[1].value as ListObject<FoodItemModel>;
+        items = fields[1].value
+            as ListObject<ReferenceObject<FoodItemModel, String>>;
 }
 
 class TimedMealModel extends Model {

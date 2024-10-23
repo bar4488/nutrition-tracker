@@ -48,14 +48,12 @@ class _CreateModelState extends State<CreateModel> {
               ),
         );
         return FormGroup(controls);
-      case ListType v:
-        throw UnimplementedError(v.toString());
-      case MapType v:
-        throw UnimplementedError(v.toString());
-      case SerializedType v:
-        throw UnimplementedError(v.toString());
-      case FieldType v:
-        throw UnimplementedError(v.toString());
+      case ListType _:
+      case MapType _:
+      case SerializedType _:
+      case FieldType _:
+      case ReferenceType _:
+        throw UnimplementedError(valueType.toString());
     }
   }
 
