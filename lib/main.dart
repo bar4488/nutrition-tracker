@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:app_platform/app_platform.dart';
 import 'package:flutter/material.dart';
 import 'package:nutrition_routine/models.dart';
+import 'package:nutrition_routine/persistence.dart';
 import 'package:nutrition_routine/save_controller.dart';
 import 'package:nutrition_routine/widgets/model_creator.dart';
 import 'package:nutrition_routine/widgets/save_button.dart';
@@ -48,6 +49,17 @@ late AppState state;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   state = await getState();
+  var saving = false;
+  state.updates().listen(
+    (event) async {
+      if (saving) return;
+      saving = true;
+      print("saving state...");
+      await saveState(state.serialize());
+      print("saved state!");
+      saving = false;
+    },
+  );
   runApp(const MyApp());
 }
 
@@ -68,8 +80,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<Model?> showCreateModelDialog(
-    BuildContext context, ModelType modelType) {
+Future<T?> showCreateModelDialog<T extends Model>(
+    BuildContext context, ModelType<T> modelType) {
   return showDialog(
     context: context,
     builder: (context) {
@@ -126,98 +138,167 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   var saveController = SaveController(state: state);
   var loadController = LoadController(state: state);
+  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(onPressed: () {}, icon: Icon(Icons.check)),
-          AnimatedBuilder(
-              animation: saveController,
-              builder: (context, c) {
-                return FutureIconButton(
-                  status: loadController.downloadStatus,
-                  downloadProgress: loadController.progress,
-                  onDownload: loadController.load,
-                  icon: Icons.upload,
-                  tooltip: "Load state",
-                );
-              }),
-          AnimatedBuilder(
-              animation: saveController,
-              builder: (context, c) {
-                return FutureIconButton(
-                  status: saveController.downloadStatus,
-                  downloadProgress: saveController.progress,
-                  onDownload: saveController.save,
-                  tooltip: "Save state",
-                );
-              }),
+      body: IndexedStack(
+        index: _index,
+        children: [
+          RoutinesView(),
+          FoodItemsView(),
         ],
       ),
-      body: StreamBuilder(
-        stream: state.routines.updates(),
-        builder: (context, snapshot) {
-          return ListView.builder(
-            itemBuilder: (context, index) {
-              if (index == state.routines.value.length) {
-                return TextButton(
-                  onPressed: () async {
-                    RoutineModel? model = await showDialog(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: Text(RoutineModel.modelType.name),
-                          content: CreateModel(
-                            modelType: RoutineModel.modelType,
-                            onCreate: (model) {
-                              Navigator.of(context).pop(model);
-                            },
-                          ),
-                          actions: [],
-                          actionsAlignment: MainAxisAlignment.spaceBetween,
-                        );
-                      },
-                    );
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _index,
+        onTap: (value) => setState(() => _index = value),
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: "1",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: "2",
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                    if (model != null) {
-                      state.routines.add(model);
+class FoodItemsView extends StatelessWidget {
+  const FoodItemsView({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Text(
+            "All food items",
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          Expanded(
+            child: StreamBuilder(
+              stream: state.foodItems.updates(),
+              builder: (context, snapshot) {
+                return ListView.builder(
+                  itemBuilder: (context, index) {
+                    if (index == state.foodItems.value.length) {
+                      return TextButton(
+                        onPressed: () async {
+                          FoodItemModel? model = await showCreateModelDialog(
+                            context,
+                            FoodItemModel.modelType,
+                          );
+
+                          if (model != null) {
+                            state.foodItems.add(model);
+                          }
+                        },
+                        child: Icon(Icons.add),
+                      );
                     }
+                    var foodItem = state.foodItems.value[index];
+                    return FoodItemTile(item: foodItem);
                   },
-                  child: Icon(Icons.add),
+                  itemCount: state.foodItems.value.length + 1,
                 );
-              }
-              var routine = state.routines.value[index];
-              return Card(
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () {
-                    print("tapped");
-                    // TODO: a route that will delete in case the model is deleted (instead of material page route)
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => RoutinePage(routine: routine),
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RoutinesView extends StatelessWidget {
+  const RoutinesView({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Text(
+            "Routines",
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          Expanded(
+            child: StreamBuilder(
+              stream: state.routines.updates(),
+              builder: (context, snapshot) {
+                return ListView.builder(
+                  itemBuilder: (context, index) {
+                    if (index == state.routines.value.length) {
+                      return TextButton(
+                        onPressed: () async {
+                          RoutineModel? model = await showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: Text(RoutineModel.modelType.name),
+                                content: CreateModel(
+                                  modelType: RoutineModel.modelType,
+                                  onCreate: (model) {
+                                    Navigator.of(context).pop(model);
+                                  },
+                                ),
+                                actions: [],
+                                actionsAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                              );
+                            },
+                          );
+
+                          if (model != null) {
+                            state.routines.add(model);
+                          }
+                        },
+                        child: Icon(Icons.add),
+                      );
+                    }
+                    var routine = state.routines.value[index];
+                    return Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () {
+                          print("tapped");
+                          // TODO: a route that will delete in case the model is deleted (instead of material page route)
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RoutinePage(routine: routine),
+                            ),
+                          );
+                        },
+                        child: ListTile(
+                          title: Hero(
+                            tag: routine,
+                            child: Text(
+                              routine.name.value,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          subtitle: Text(
+                              "number of meals: ${routine.meals.value.length}"),
+                        ),
                       ),
                     );
                   },
-                  child: ListTile(
-                    title: Hero(
-                      tag: routine,
-                      child: Text(
-                        routine.name.value,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    subtitle:
-                        Text("number of meals: ${routine.meals.value.length}"),
-                  ),
-                ),
-              );
-            },
-            itemCount: state.routines.value.length + 1,
-          );
-        },
+                  itemCount: state.routines.value.length + 1,
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -361,30 +442,7 @@ class MealPage extends StatelessWidget {
                     );
                   }
                   var item = meal.items.value[index];
-                  return Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () {
-                        // TODO: a route that will delete in case the model is deleted (instead of material page route)
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => ItemPage(item: item),
-                          ),
-                        );
-                      },
-                      child: ListTile(
-                        title: Hero(
-                          tag: item,
-                          child: Text(
-                            item.name.value,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        subtitle: Text(
-                            "calories: ${item.nutritionalValues.get("calories")?.value}"),
-                      ),
-                    ),
-                  );
+                  return FoodItemTile(item: item);
                 },
                 itemCount: meal.items.value.length + 2,
               ),
@@ -396,9 +454,46 @@ class MealPage extends StatelessWidget {
   }
 }
 
-class ItemPage extends StatelessWidget {
+class FoodItemTile extends StatelessWidget {
+  const FoodItemTile({
+    super.key,
+    required this.item,
+  });
+
   final FoodItemModel item;
-  const ItemPage({super.key, required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          // TODO: a route that will delete in case the model is deleted (instead of material page route)
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => FoodItemPage(item: item),
+            ),
+          );
+        },
+        child: ListTile(
+          title: Hero(
+            tag: item,
+            child: Text(
+              item.name.value,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          subtitle: Text(
+              "calories: ${item.nutritionalValues.get("calories")?.value}"),
+        ),
+      ),
+    );
+  }
+}
+
+class FoodItemPage extends StatelessWidget {
+  final FoodItemModel item;
+  const FoodItemPage({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -424,10 +519,21 @@ class ItemPage extends StatelessWidget {
                   if (index == nutritionalValues.length) {
                     return TextButton(
                       onPressed: () async {
-                        var name = await showTextFieldDialog(
-                            context, "Add Nutritional value", "something");
-                        if (name != null) {
-                          item.nutritionalValues.add(name, intType.create(0));
+                        var model = await showCreateModelDialog(
+                          context,
+                          ModelType("Nutritional value", [
+                            FieldType("name", stringType),
+                            FieldType("amount", intType),
+                          ]),
+                        );
+                        if (model != null) {
+                          var modelValues = model.serialize();
+                          item.nutritionalValues.add(
+                            modelValues["name"],
+                            intType.create(
+                              modelValues["amount"],
+                            ),
+                          );
                         }
                       },
                       child: Icon(Icons.add),
@@ -469,6 +575,8 @@ class ItemNutritionValue extends StatefulWidget {
 
 class _ItemNutritionValueState extends State<ItemNutritionValue> {
   String? error;
+  int? number;
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -485,7 +593,10 @@ class _ItemNutritionValueState extends State<ItemNutritionValue> {
             onChanged: (value) {
               var number = int.tryParse(value);
               if (number != null) {
-                widget.nutritionalValue.value.set(number);
+                widget.nutritionalValue.value.set(
+                  number,
+                  debounce: Duration(milliseconds: 300),
+                );
                 setState(() {
                   error = null;
                 });
@@ -500,5 +611,13 @@ class _ItemNutritionValueState extends State<ItemNutritionValue> {
         )
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    if (number != null) {
+      widget.nutritionalValue.value.set(number!);
+    }
+    super.dispose();
   }
 }

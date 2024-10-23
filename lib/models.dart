@@ -14,16 +14,15 @@ class FoodItemModel extends Model {
     ),
   ];
 
-  static final ModelType<FoodItemModel> modelType = ModelType(
+  static final ModelType<FoodItemModel> modelType = ModelType<FoodItemModel>(
     "FoodItemModel",
     FoodItemModel.fields,
-    FoodItemModel.fromFields,
+    constructor: FoodItemModel.fromFields,
   );
 
-  FoodItemModel.fromFields(super.fields)
+  FoodItemModel.fromFields(super.fields, super.type)
       : name = fields[0].value as Primitive<String>,
-        nutritionalValues = fields[1].value as MapObject<Primitive<int>>,
-        super(type: modelType);
+        nutritionalValues = fields[1].value as MapObject<Primitive<int>>;
 }
 
 class MealModel extends Model {
@@ -39,16 +38,15 @@ class MealModel extends Model {
     ),
   ];
 
-  static final ModelType<MealModel> modelType = ModelType(
+  static final ModelType<MealModel> modelType = ModelType<MealModel>(
     "MealModel",
     MealModel.fields,
-    MealModel.fromFields,
+    constructor: MealModel.fromFields,
   );
 
-  MealModel.fromFields(super.fields)
+  MealModel.fromFields(super.fields, super.type)
       : name = fields[0].value as Primitive<String>,
-        items = fields[1].value as ListObject<FoodItemModel>,
-        super(type: modelType);
+        items = fields[1].value as ListObject<FoodItemModel>;
 }
 
 class TimedMealModel extends Model {
@@ -68,16 +66,15 @@ class TimedMealModel extends Model {
     ),
   ];
 
-  static final ModelType<TimedMealModel> modelType = ModelType(
+  static final ModelType<TimedMealModel> modelType = ModelType<TimedMealModel>(
     "TimedMealModel",
     TimedMealModel.fields,
-    TimedMealModel.fromFields,
+    constructor: TimedMealModel.fromFields,
   );
 
-  TimedMealModel.fromFields(super.fields)
+  TimedMealModel.fromFields(super.fields, super.type)
       : meal = fields[0].value as MealModel,
-        time = fields[1].value as Primitive<TimeOfDay>,
-        super(type: modelType);
+        time = fields[1].value as Primitive<TimeOfDay>;
 }
 
 class RoutineModel extends Model {
@@ -94,20 +91,20 @@ class RoutineModel extends Model {
     FieldType<Primitive<String>>("name", stringType)
   ];
 
-  static final ModelType<RoutineModel> modelType = ModelType(
+  static final ModelType<RoutineModel> modelType = ModelType<RoutineModel>(
     "RoutineModel",
     RoutineModel.fields,
-    RoutineModel.fromFields,
+    constructor: RoutineModel.fromFields,
   );
 
-  RoutineModel.fromFields(super.fields)
+  RoutineModel.fromFields(super.fields, super.type)
       : meals = fields[0].value as ListObject<TimedMealModel>,
-        name = fields[1].value as Primitive<String>,
-        super(type: modelType);
+        name = fields[1].value as Primitive<String>;
 }
 
 class AppState extends Model {
   ListObject<RoutineModel> routines;
+  ListObject<FoodItemModel> foodItems;
 
   // boilerplate
   static final List<FieldType> fields = [
@@ -116,15 +113,20 @@ class AppState extends Model {
       ListType<RoutineModel>(RoutineModel.modelType),
       defaultValue: () => [],
     ),
+    FieldType<ListObject<FoodItemModel>>(
+      "foodItems",
+      ListType<FoodItemModel>(FoodItemModel.modelType),
+      defaultValue: () => [],
+    ),
   ];
 
-  static final ModelType<AppState> modelType = ModelType(
+  static final ModelType<AppState> modelType = ModelType<AppState>(
     "State",
     AppState.fields,
-    AppState.fromFields,
+    constructor: AppState.fromFields,
   );
 
-  AppState.fromFields(super.fields)
+  AppState.fromFields(super.fields, super.type)
       : routines = fields[0].value as ListObject<RoutineModel>,
-        super(type: modelType);
+        foodItems = fields[1].value as ListObject<FoodItemModel>;
 }

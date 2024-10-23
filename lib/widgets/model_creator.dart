@@ -70,12 +70,11 @@ class _CreateModelState extends State<CreateModel> {
     return ReactiveForm(
       formGroup: form,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: _CreateModelContent(
-              modelType: widget.modelType,
-              form: form,
-            ),
+          _CreateModelContent(
+            modelType: widget.modelType,
+            form: form,
           ),
           ReactiveFormConsumer(
             builder: (context, form, child) {
