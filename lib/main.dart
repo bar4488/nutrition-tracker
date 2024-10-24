@@ -1,62 +1,18 @@
-import 'dart:convert';
-import 'dart:io';
+import 'dart:async';
 
 import 'package:app_platform/app_platform.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:nutrition_routine/meal_page.dart';
 import 'package:nutrition_routine/models.dart';
-import 'package:nutrition_routine/persistence.dart';
-import 'package:nutrition_routine/save_controller.dart';
+import 'package:nutrition_routine/shufersal/food_widget.dart';
+import 'package:nutrition_routine/shufersal/shufersal_sheli.dart';
+import 'package:nutrition_routine/state.dart';
+import 'package:nutrition_routine/widgets/dialogs.dart';
 import 'package:nutrition_routine/widgets/dual_button.dart';
-import 'package:nutrition_routine/widgets/item_picker.dart';
 import 'package:nutrition_routine/widgets/model_creator.dart';
-import 'package:nutrition_routine/widgets/model_tile.dart';
-import 'package:nutrition_routine/widgets/save_button.dart';
-import 'package:path_provider/path_provider.dart';
-
-Future initAppState() async {
-  AppState state;
-  try {
-    final directory = await getApplicationDocumentsDirectory();
-    var file = File('${directory.path}/state.json');
-    var stateString = await file.readAsString();
-    var stateJson = jsonDecode(stateString);
-    state = AppState.modelType.create(stateJson);
-  } catch (e) {
-    state = AppState.modelType.create({
-      "routines": [
-        {
-          "name": "routine a",
-          "meals": [
-            {
-              "meal": {
-                "name": "nutty pudding",
-                "items": [
-                  "strawberries",
-                ],
-              },
-              "time": 123,
-            },
-          ],
-        }
-      ],
-      "foodItems": [
-        {
-          "name": "strawberries",
-          "nutritionalValues": {
-            "calories": 100,
-          },
-        }
-      ]
-    });
-  }
-  app.initialize(state);
-}
-
-AppState getState() {
-  return app.state;
-}
-
-late AppState state;
+import 'package:nutrition_routine/widgets/model_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -93,81 +49,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<T?> showCreateModelDialog<T extends Model>(
-    BuildContext context, ModelType<T> modelType) {
-  return showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text(modelType.name),
-        content: CreateModel(
-          modelType: modelType,
-          onCreate: (model) {
-            Navigator.of(context).pop(model);
-          },
-        ),
-        actions: [],
-        actionsAlignment: MainAxisAlignment.spaceBetween,
-      );
-    },
-  );
-}
-
-Future<T?> showItemPickerDialog<T extends Model>(
-  BuildContext context,
-  ListObject<T> items,
-  String Function(T) toString,
-  Widget Function(BuildContext, T, void Function() onTap) build,
-) async {
-  return await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text("Search"),
-        content: ConstrainedBox(
-          constraints: BoxConstraints.loose(Size.fromHeight(350)),
-          child: ItemPicker(
-            items: items,
-            itemToString: toString,
-            buildItem: build,
-            onSelect: (context, index) {
-              Navigator.of(context).pop(items.value[index]);
-            },
-          ),
-        ),
-      );
-    },
-  );
-}
-
-Future<String?> showTextFieldDialog(
-    BuildContext context, String title, String hint) async {
-  String? value;
-  return await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text(title),
-        content: TextField(
-          onChanged: (v) => value = v,
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: Text("cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(value),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: Text("add"),
-          ),
-        ],
-        actionsAlignment: MainAxisAlignment.spaceBetween,
-      );
-    },
-  );
-}
-
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
@@ -176,8 +57,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  var saveController = SaveController(state: state);
-  var loadController = LoadController(state: state);
   int _index = 0;
 
   @override
@@ -196,11 +75,11 @@ class _MyHomePageState extends State<MyHomePage> {
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: "1",
+            label: "Routines",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "2",
+            icon: Icon(Icons.list),
+            label: "All items",
           ),
         ],
       ),
@@ -216,42 +95,96 @@ class FoodItemsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        children: [
-          Text(
-            "All food items",
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          Expanded(
-            child: StreamBuilder(
-              stream: state.foodItems.updates(),
-              builder: (context, snapshot) {
-                return ListView.builder(
-                  itemBuilder: (context, index) {
-                    if (index == state.foodItems.value.length) {
-                      return TextButton(
-                        onPressed: () async {
-                          FoodItemModel? model = await showCreateModelDialog(
-                            context,
-                            FoodItemModel.modelType,
-                          );
-
-                          if (model != null) {
-                            state.foodItems.add(model);
-                          }
-                        },
-                        child: Icon(Icons.add),
-                      );
-                    }
-                    var foodItem = state.foodItems.value[index];
-                    return FoodItemTile(item: foodItem);
-                  },
-                  itemCount: state.foodItems.value.length + 1,
-                );
-              },
+      child: ModelListPage(
+        title: stringType.create("All food items"),
+        items: state.foodItems,
+        itemTitle: (item) {
+          return item.name.value;
+        },
+        itemSubTitle: (item) {
+          return "calories: ${item.nutritionalValues.get("calories")?.displayValue}";
+        },
+        itemOnPress: (item) async {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => FoodItemPage(item: item, tag: item),
             ),
-          ),
-        ],
+          );
+        },
+        bottomItem: DualButton(
+            onPressed1: () async {
+              FoodItemModel? model = await showCreateModelDialog(
+                context,
+                FoodItemModel.modelType,
+              );
+
+              if (model != null) {
+                state.foodItems.add(model);
+              }
+            },
+            child1: Icon(Icons.add),
+            onPressed2: () async {
+              var barcode = await showDialog<String?>(
+                context: context,
+                builder: (context) {
+                  return Dialog(
+                    child: MobileScanner(
+                      onDetect: (capture) {
+                        if (capture.barcodes.isNotEmpty) {
+                          for (var c in capture.barcodes) {
+                            if (c.type == BarcodeType.product &&
+                                c.rawValue != null) {
+                              Navigator.of(context).pop(c.rawValue!);
+                            }
+                          }
+                        }
+                      },
+                    ),
+                  );
+                },
+              );
+              if (barcode == null || !context.mounted) return;
+
+              var foodFuture = fetchFoodFromBarcode(barcode);
+              await showDialog(
+                context: context,
+                builder: (dialogContext) {
+                  return Dialog(
+                    clipBehavior: Clip.hardEdge,
+                    child: FutureBuilder(
+                        future: foodFuture,
+                        builder: (futureContext, snapshot) {
+                          switch (snapshot.connectionState) {
+                            case ConnectionState.waiting:
+                              return Center(child: CircularProgressIndicator());
+                            case ConnectionState.done:
+                              if (snapshot.hasData) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0)
+                                      .add(EdgeInsets.only(bottom: 16)),
+                                  child: FoodWidget(food: snapshot.data!),
+                                );
+                              } else {
+                                Timer(Duration(milliseconds: 200), () async {
+                                  if (context.mounted) {
+                                    await showAlertDialog(
+                                        context,
+                                        "Item not found!",
+                                        "item with barcode $barcode was not found!");
+                                  }
+                                });
+                                Navigator.of(futureContext).pop("invalid");
+                                return Center();
+                              }
+                            default:
+                              throw Exception();
+                          }
+                        }),
+                  );
+                },
+              );
+            },
+            child2: Icon(CupertinoIcons.barcode)),
       ),
     );
   }
@@ -422,141 +355,6 @@ class RoutinePage extends StatelessWidget {
   }
 }
 
-class MealPage extends StatelessWidget {
-  final MealModel meal;
-  const MealPage({super.key, required this.meal});
-
-  @override
-  build(BuildContext context) {
-    return StreamBuilder(
-      stream: meal.updates(),
-      builder: (context, snapshot) {
-        return Scaffold(
-          appBar: AppBar(
-            title: Hero(
-              tag: meal,
-              child: Text(
-                meal.name.value,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-          ),
-          body: Column(children: [
-            Text("Items:"),
-            Expanded(
-              child: ListView.builder(
-                itemBuilder: (context, index) {
-                  if (index == meal.items.value.length + 1) {
-                    Map<String, int> totals = {};
-                    for (var item in meal.items.value
-                        .where((v) => v.value != null)
-                        .map((v) => v.value!)) {
-                      for (var entry in item.nutritionalValues.value.entries) {
-                        totals[entry.key] =
-                            (totals[entry.key] ?? 0) + entry.value.value;
-                      }
-                    }
-                    return Column(
-                      children: [
-                        for (var total in totals.entries)
-                          Text("total ${total.key}: ${total.value}"),
-                      ],
-                    );
-                  }
-                  if (index == meal.items.value.length) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: DualButton(
-                        onPressed1: () async {
-                          Model? model = await showCreateModelDialog(
-                              context, FoodItemModel.modelType);
-                          if (model != null) {
-                            state.foodItems.add(model as FoodItemModel);
-                            meal.items.createAndAdd(model.name.value);
-                          }
-                          // var name = await showTextFieldDialog(
-                          //     context, "Add Meal", "something");
-                          // if (name != null) {
-                          //   meal.items.add(FoodItemModel.modelType.create({
-                          //     "name": name,
-                          //     "nutritionalValues": {},
-                          //   }));
-                          // }
-                        },
-                        child1: Icon(Icons.add),
-                        onPressed2: () async {
-                          var model = await showItemPickerDialog(
-                            context,
-                            state.foodItems,
-                            (e) => e.name.value,
-                            (context, e, onTap) => SimpleCardTile(
-                              onTap: onTap,
-                              title: e.name.value,
-                            ),
-                          );
-                          if (model != null) {
-                            meal.items.createAndAdd(model.name.value);
-                          }
-                        },
-                        child2: Icon(Icons.search),
-                      ),
-                    );
-                  }
-                  var item = meal.items.value[index];
-                  if (item.value == null) {
-                    return SimpleCardTile(
-                      title: "Unknown food item! (${item.key})",
-                    );
-                  }
-                  return FoodItemTile(item: item.value!);
-                },
-                itemCount: meal.items.value.length + 2,
-              ),
-            )
-          ]),
-        );
-      },
-    );
-  }
-}
-
-class FoodItemTile extends StatelessWidget {
-  const FoodItemTile({
-    super.key,
-    required this.item,
-  });
-
-  final FoodItemModel item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          // TODO: a route that will delete in case the model is deleted (instead of material page route)
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => FoodItemPage(item: item, tag: this),
-            ),
-          );
-        },
-        child: ListTile(
-          title: Hero(
-            tag: this,
-            child: Text(
-              item.name.value,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          subtitle: Text(
-              "calories: ${item.nutritionalValues.get("calories")?.value}"),
-        ),
-      ),
-    );
-  }
-}
-
 class FoodItemPage extends StatelessWidget {
   final FoodItemModel item;
   final Object tag;
@@ -594,16 +392,15 @@ class FoodItemPage extends StatelessWidget {
                           context,
                           ModelType("Nutritional value", [
                             FieldType("name", stringType),
-                            FieldType("amount", intType),
+                            FieldType("value", NutritionValueModel.modelType),
                           ]),
                         );
                         if (model != null) {
                           var modelValues = model.serialize();
                           item.nutritionalValues.add(
                             modelValues["name"],
-                            intType.create(
-                              modelValues["amount"],
-                            ),
+                            NutritionValueModel.modelType
+                                .create(modelValues["value"]),
                           );
                         }
                       },
@@ -617,7 +414,8 @@ class FoodItemPage extends StatelessWidget {
                       title: Hero(
                         tag: nutritionalValue,
                         child: ItemNutritionValue(
-                            nutritionalValue: nutritionalValue),
+                          nutritionalValue: nutritionalValue,
+                        ),
                       ),
                     ),
                   );
@@ -638,7 +436,7 @@ class ItemNutritionValue extends StatefulWidget {
     required this.nutritionalValue,
   });
 
-  final MapEntry<String, Primitive<int>> nutritionalValue;
+  final MapEntry<String, NutritionValueModel> nutritionalValue;
 
   @override
   State<ItemNutritionValue> createState() => _ItemNutritionValueState();
@@ -646,7 +444,7 @@ class ItemNutritionValue extends StatefulWidget {
 
 class _ItemNutritionValueState extends State<ItemNutritionValue> {
   String? error;
-  int? number;
+  String? unit;
 
   @override
   Widget build(BuildContext context) {
@@ -659,36 +457,43 @@ class _ItemNutritionValueState extends State<ItemNutritionValue> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         Expanded(
-          child: TextFormField(
-            initialValue: widget.nutritionalValue.value.value.toString(),
-            onChanged: (value) {
-              var number = int.tryParse(value);
-              if (number != null) {
-                widget.nutritionalValue.value.set(
-                  number,
-                  debounce: Duration(milliseconds: 300),
+          child: StreamBuilder(
+              stream: widget.nutritionalValue.value.unit.updates(),
+              builder: (context, _) {
+                var nutritionValue = widget.nutritionalValue.value;
+                return TextFormField(
+                  initialValue: nutritionValue.displayValue,
+                  onChanged: (value) {
+                    var values = value.split(" ");
+                    var number = int.tryParse(values[0]);
+                    if (number == null) {
+                      setState(() {
+                        error = "invalid number $value!";
+                      });
+                      return;
+                    }
+                    if (values.length > 2) {
+                      error = "invalid format! '<amount> <value?>!";
+                    }
+                    widget.nutritionalValue.value.unit
+                        .set(values.length > 1 ? values[1] : "grams");
+                    widget.nutritionalValue.value.amount.set(
+                      number,
+                      debounce: Duration(milliseconds: 300),
+                    );
+                    setState(() {
+                      error = null;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    errorText: error,
+                    hintText: "<amount> <unit>",
+                    suffixText: widget.nutritionalValue.value.unit.value,
+                  ),
                 );
-                setState(() {
-                  error = null;
-                });
-              } else {
-                setState(() {
-                  error = "invalid number $value!";
-                });
-              }
-            },
-            decoration: InputDecoration(errorText: error),
-          ),
+              }),
         )
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    if (number != null) {
-      widget.nutritionalValue.value.set(number!);
-    }
-    super.dispose();
   }
 }

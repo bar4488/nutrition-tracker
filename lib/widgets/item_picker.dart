@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_platform/app_platform.dart';
 import 'package:flutter/material.dart';
 
@@ -22,17 +24,26 @@ class ItemPicker<T extends Model> extends StatefulWidget {
 class _ItemPickerState<T extends Model> extends State<ItemPicker<T>> {
   Primitive<String> searchContent = stringType.create("");
   List<(int, T)>? items;
+  List<StreamSubscription> subs = [];
 
   @override
   void initState() {
     super.initState();
     updateItems();
-    searchContent.updates().listen(
+    subs.add(searchContent.updates().listen(
           (event) => updateItems(),
-        );
-    widget.items.updates().listen(
+        ));
+    subs.add(widget.items.updates().listen(
           (event) => updateItems(),
-        );
+        ));
+  }
+
+  @override
+  void dispose() {
+    for (var sub in subs) {
+      sub.cancel();
+    }
+    super.dispose();
   }
 
   void updateItems() {
@@ -49,11 +60,15 @@ class _ItemPickerState<T extends Model> extends State<ItemPicker<T>> {
         stream: widget.items.updates(),
         builder: (context, snapshot) {
           return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                decoration: InputDecoration(hintText: "search"),
-                onChanged: (value) => searchContent.set(value,
-                    debounce: Duration(milliseconds: 200)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: TextField(
+                  decoration: InputDecoration(hintText: "search"),
+                  onChanged: (value) => searchContent.set(value,
+                      debounce: Duration(milliseconds: 200)),
+                ),
               ),
               Expanded(
                 child: ListView.builder(
@@ -64,7 +79,12 @@ class _ItemPickerState<T extends Model> extends State<ItemPicker<T>> {
                   ),
                   itemCount: items?.length ?? 0,
                 ),
-              )
+              ),
+              Divider(
+                height: 0,
+                endIndent: 4,
+                indent: 4,
+              ),
             ],
           );
         });

@@ -3,15 +3,38 @@ import 'package:flutter/material.dart';
 
 final app = AnApp<AppState>();
 
+class NutritionValueModel extends Model {
+  Primitive<int> amount;
+  Primitive<String> unit;
+
+  String get displayValue => "${amount.value} ${unit.value}";
+
+  static final List<FieldType> fields = [
+    FieldType<Primitive<int>>("amount", intType),
+    FieldType<Primitive<String>>("unit", stringType),
+  ];
+
+  static final ModelType<NutritionValueModel> modelType =
+      ModelType<NutritionValueModel>(
+    "NutritionValueModel",
+    NutritionValueModel.fields,
+    constructor: NutritionValueModel.fromFields,
+  );
+
+  NutritionValueModel.fromFields(super.fields, super.type)
+      : amount = fields[0].value as Primitive<int>,
+        unit = fields[1].value as Primitive<String>;
+}
+
 class FoodItemModel extends Model {
   Primitive<String> name;
-  MapObject<Primitive<int>> nutritionalValues;
+  MapObject<NutritionValueModel> nutritionalValues;
 
   static final List<FieldType> fields = [
     FieldType<Primitive<String>>("name", stringType),
-    FieldType<MapObject<Primitive<int>>>(
+    FieldType<MapObject<NutritionValueModel>>(
       "nutritionalValues",
-      MapType<Primitive<int>>(intType),
+      MapType<NutritionValueModel>(NutritionValueModel.modelType),
       defaultValue: () => {},
     ),
   ];
@@ -24,33 +47,54 @@ class FoodItemModel extends Model {
 
   FoodItemModel.fromFields(super.fields, super.type)
       : name = fields[0].value as Primitive<String>,
-        nutritionalValues = fields[1].value as MapObject<Primitive<int>>;
+        nutritionalValues = fields[1].value as MapObject<NutritionValueModel>;
+}
+
+class MealItemModel extends Model {
+  ReferenceObject<FoodItemModel, String> item;
+  Primitive<int> amount;
+
+  static final List<FieldType> fields = [
+    FieldType<ReferenceObject<FoodItemModel, String>>(
+      "item",
+      ReferenceType<FoodItemModel, String>(
+        FoodItemModel.modelType,
+        app,
+        retrieve: (name, app) {
+          return (app.state as AppState)
+              .foodItems
+              .value
+              .where(
+                (element) => element.name.value == name,
+              )
+              .firstOrNull;
+        },
+        shouldNotifyChanges: true,
+      ),
+    ),
+    FieldType<Primitive<int>>("amount", intType),
+  ];
+
+  static final ModelType<MealItemModel> modelType = ModelType<MealItemModel>(
+    "MealItemModel",
+    MealItemModel.fields,
+    constructor: MealItemModel.fromFields,
+  );
+
+  MealItemModel.fromFields(super.fields, super.type)
+      : item = fields[0].value as ReferenceObject<FoodItemModel, String>,
+        amount = fields[1].value as Primitive<int>;
 }
 
 class MealModel extends Model {
   Primitive<String> name;
-  ListObject<ReferenceObject<FoodItemModel, String>> items;
+  ListObject<MealItemModel> items;
 
   static final List<FieldType> fields = [
     FieldType<Primitive<String>>("name", stringType),
-    FieldType<ListObject<ReferenceObject<FoodItemModel, String>>>(
+    FieldType<ListObject<MealItemModel>>(
       "items",
-      ListType<ReferenceObject<FoodItemModel, String>>(
-        ReferenceType<FoodItemModel, String>(
-          FoodItemModel.modelType,
-          app,
-          retrieve: (name, app) {
-            return (app.state as AppState)
-                .foodItems
-                .value
-                .where(
-                  (element) => element.name.value == name,
-                )
-                .firstOrNull;
-          },
-          shouldNotifyChanges: true,
-        ),
-      ),
+      ListType<MealItemModel>(MealItemModel.modelType),
       defaultValue: () => [],
     ),
   ];
@@ -63,8 +107,7 @@ class MealModel extends Model {
 
   MealModel.fromFields(super.fields, super.type)
       : name = fields[0].value as Primitive<String>,
-        items = fields[1].value
-            as ListObject<ReferenceObject<FoodItemModel, String>>;
+        items = fields[1].value as ListObject<MealItemModel>;
 }
 
 class TimedMealModel extends Model {
