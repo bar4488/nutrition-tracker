@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:app_platform/app_platform.dart';
+import 'package:app_platform_flutter/widgets/dialogs.dart';
+import 'package:app_platform_flutter/widgets/dual_button.dart';
+import 'package:app_platform_flutter/widgets/model_creator.dart';
+import 'package:app_platform_flutter/widgets/model_view.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -9,10 +13,6 @@ import 'package:nutrition_routine/models.dart';
 import 'package:nutrition_routine/shufersal/food_widget.dart';
 import 'package:nutrition_routine/shufersal/shufersal_sheli.dart';
 import 'package:nutrition_routine/state.dart';
-import 'package:nutrition_routine/widgets/dialogs.dart';
-import 'package:nutrition_routine/widgets/dual_button.dart';
-import 'package:nutrition_routine/widgets/model_creator.dart';
-import 'package:nutrition_routine/widgets/model_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,6 +110,9 @@ class FoodItemsView extends StatelessWidget {
               builder: (context) => FoodItemPage(item: item, tag: item),
             ),
           );
+        },
+        onDeleteItems: (toDelete) {
+          state.foodItems.removeN(toDelete);
         },
         bottomItem: DualButton(
             onPressed1: () async {
@@ -366,6 +369,33 @@ class FoodItemPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ModelListPage(
+      title: item.name,
+      tag: item,
+      items: item.nutritionalValues.asList(),
+      itemTitle: (item) => item.value.key,
+      itemSubTitle: (item) => item.value.value.displayValue,
+      itemOnPress: (item) {},
+      bottomItem: TextButton(
+        onPressed: () async {
+          var model = await showCreateModelDialog(
+            context,
+            ModelType("Nutritional value", [
+              FieldType("name", stringType),
+              FieldType("value", NutritionValueModel.modelType),
+            ]),
+          );
+          if (model != null) {
+            var modelValues = model.serialize();
+            item.nutritionalValues.add(
+              modelValues["name"],
+              NutritionValueModel.modelType.create(modelValues["value"]),
+            );
+          }
+        },
+        child: Icon(Icons.add),
+      ),
+    );
     return StreamBuilder(
       stream: item.updates(),
       builder: (context, snapshot) {
@@ -465,7 +495,7 @@ class _ItemNutritionValueState extends State<ItemNutritionValue> {
                   initialValue: nutritionValue.displayValue,
                   onChanged: (value) {
                     var values = value.split(" ");
-                    var number = int.tryParse(values[0]);
+                    var number = double.tryParse(values[0]);
                     if (number == null) {
                       setState(() {
                         error = "invalid number $value!";

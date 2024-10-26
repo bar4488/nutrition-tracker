@@ -4,6 +4,32 @@ import 'package:html/dom.dart';
 import 'package:html/parser.dart' show parse;
 import 'package:http/http.dart' as http;
 
+Map<String, String> nutritionalValuesTranslation = {
+  "אנרגיה": "calories",
+  "כולסטרול": "cholesterol",
+  "נתרן": "sodium",
+  "מתוכם שומן רווי": "saturated fats",
+  "חומצות שומן טאנס": "trans fats",
+  "פחמימות": "carbs",
+  "חלבונים": "proteins",
+  "שומנים": "fats",
+  "סוכרים מתוך פחמימות": "sugars",
+  "סוכרים": "sugars",
+  "סיבים תזונתיים": "fibers",
+};
+Map<String, String> unitsTranslation = {
+  "גרם": "g",
+  "מג": "mg",
+  "מ\"ג": "mg",
+  "קל": "cal",
+  "קלוריות": "cal",
+};
+
+Map<String, double> unitToGrams = {
+  "milligrams": 0.001,
+  "kg": 1000,
+};
+
 class Food {
   String name;
   String company;
@@ -60,7 +86,7 @@ Future<Food?> fetchFoodFromBarcode(String barcode) async {
     barcode = barcode.replaceFirst(RegExp("0+"), "");
   }
   var res = await http.read(
-      Uri.parse('https://www.shufersal.co.il/online/he/p/P_${barcode}/json'));
+      Uri.parse('https://www.shufersal.co.il/online/he/p/P_$barcode/json'));
 
   var document = parse(res);
 

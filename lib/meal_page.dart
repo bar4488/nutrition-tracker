@@ -1,13 +1,13 @@
 import 'package:app_platform/app_platform.dart';
+import 'package:app_platform_flutter/widgets/computation.dart';
+import 'package:app_platform_flutter/widgets/dialogs.dart';
+import 'package:app_platform_flutter/widgets/dual_button.dart';
+import 'package:app_platform_flutter/widgets/model_view.dart';
+import 'package:app_platform_flutter/widgets/simple_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:nutrition_routine/main.dart';
 import 'package:nutrition_routine/models.dart';
 import 'package:nutrition_routine/state.dart';
-import 'package:nutrition_routine/widgets/computation.dart';
-import 'package:nutrition_routine/widgets/dialogs.dart';
-import 'package:nutrition_routine/widgets/dual_button.dart';
-import 'package:nutrition_routine/widgets/model_view.dart';
-import 'package:nutrition_routine/widgets/simple_tile.dart';
 
 class MealPage extends StatefulWidget {
   final MealModel meal;
@@ -21,11 +21,14 @@ class _MealPageState extends State<MealPage> {
   List<int>? deleting;
   bool get isDeleting => deleting != null;
 
-  late Computation<Map<String, int>> initialTotals;
+  late Computation<Map<String, double>> initialTotals;
+  late Stream<Map<String, double>> totals;
   @override
   void initState() {
+    super.initState();
+
     initialTotals = Computation(() {
-      Map<String, int> totals = {};
+      Map<String, double> totals = {};
       for (var item in widget.meal.items.value
           .where((v) => v.item.value != null)
           .map((v) => v.item.value!)) {
@@ -36,7 +39,25 @@ class _MealPageState extends State<MealPage> {
       }
       return totals;
     });
-    super.initState();
+    totals = widget.meal.items.updates().map(
+      (event) {
+        Map<String, double> totals = {};
+        for (var item in widget.meal.items.value
+            .where((v) => v.item.value != null)
+            .map((v) => v.item.value!)) {
+          for (var entry in item.nutritionalValues.value.entries) {
+            totals[entry.key] =
+                (totals[entry.key] ?? 0) + entry.value.amount.value;
+          }
+        }
+        return totals;
+      },
+    );
+    totals.listen(
+      (event) {
+        print(event);
+      },
+    );
   }
 
   void toggleDelete(int index) {
@@ -168,21 +189,8 @@ class _MealPageState extends State<MealPage> {
             ),
           ),
           StreamBuilder(
-            initialData: initialTotals.getValue(),
-            stream: widget.meal.items.updates().map(
-              (event) {
-                Map<String, int> totals = {};
-                for (var item in widget.meal.items.value
-                    .where((v) => v.item.value != null)
-                    .map((v) => v.item.value!)) {
-                  for (var entry in item.nutritionalValues.value.entries) {
-                    totals[entry.key] =
-                        (totals[entry.key] ?? 0) + entry.value.amount.value;
-                  }
-                }
-                return totals;
-              },
-            ).distinct(),
+            // initialData: initialTotals.getValue(),
+            stream: totals,
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return Text("meal deleted!");

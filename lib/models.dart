@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 final app = AnApp<AppState>();
 
 class NutritionValueModel extends Model {
-  Primitive<int> amount;
+  Primitive<double> amount;
   Primitive<String> unit;
 
   String get displayValue => "${amount.value} ${unit.value}";
 
   static final List<FieldType> fields = [
-    FieldType<Primitive<int>>("amount", intType),
+    FieldType<Primitive<double>>("amount", doubleType),
     FieldType<Primitive<String>>("unit", stringType),
   ];
 
@@ -22,19 +22,25 @@ class NutritionValueModel extends Model {
   );
 
   NutritionValueModel.fromFields(super.fields, super.type)
-      : amount = fields[0].value as Primitive<int>,
+      : amount = fields[0].value as Primitive<double>,
         unit = fields[1].value as Primitive<String>;
 }
 
 class FoodItemModel extends Model {
   Primitive<String> name;
   MapObject<NutritionValueModel> nutritionalValues;
+  MapObject<Primitive<String>> additionalValues;
 
   static final List<FieldType> fields = [
     FieldType<Primitive<String>>("name", stringType),
     FieldType<MapObject<NutritionValueModel>>(
       "nutritionalValues",
       MapType<NutritionValueModel>(NutritionValueModel.modelType),
+      defaultValue: () => {},
+    ),
+    FieldType<MapObject<Primitive<String>>>(
+      "additionalValues",
+      MapType<Primitive<String>>(stringType),
       defaultValue: () => {},
     ),
   ];
@@ -47,17 +53,18 @@ class FoodItemModel extends Model {
 
   FoodItemModel.fromFields(super.fields, super.type)
       : name = fields[0].value as Primitive<String>,
-        nutritionalValues = fields[1].value as MapObject<NutritionValueModel>;
+        nutritionalValues = fields[1].value as MapObject<NutritionValueModel>,
+        additionalValues = fields[2].value as MapObject<Primitive<String>>;
 }
 
 class MealItemModel extends Model {
-  ReferenceObject<FoodItemModel, String> item;
+  NamedReferenceObject<FoodItemModel, String> item;
   Primitive<int> amount;
 
   static final List<FieldType> fields = [
-    FieldType<ReferenceObject<FoodItemModel, String>>(
+    FieldType<NamedReferenceObject<FoodItemModel, String>>(
       "item",
-      ReferenceType<FoodItemModel, String>(
+      NamedReferenceType<FoodItemModel, String>(
         FoodItemModel.modelType,
         app,
         retrieve: (name, app) {
@@ -82,7 +89,7 @@ class MealItemModel extends Model {
   );
 
   MealItemModel.fromFields(super.fields, super.type)
-      : item = fields[0].value as ReferenceObject<FoodItemModel, String>,
+      : item = fields[0].value as NamedReferenceObject<FoodItemModel, String>,
         amount = fields[1].value as Primitive<int>;
 }
 
