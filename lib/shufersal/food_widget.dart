@@ -2,6 +2,7 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables
 
 import 'package:flutter/material.dart';
+import 'package:nutrition_routine/models.dart';
 import 'package:nutrition_routine/shufersal/shufersal_sheli.dart';
 import 'package:nutrition_routine/state.dart';
 
@@ -147,7 +148,6 @@ class _FoodWidgetState extends State<FoodWidget> {
               onPressed: chosenTable == null
                   ? null
                   : () {
-                      Map<String, String> others;
                       var ourTable = widget.food.nutritionValue[chosenTable]!;
                       Map<String, String?> additionalValues = {
                         "company": widget.food.company,
@@ -202,7 +202,7 @@ class _FoodWidgetState extends State<FoodWidget> {
                         "additionalValues": additionalValues,
                         "nutritionalValues": nutritionalValues,
                       };
-                      state.foodItems.createAndAdd(foodItem);
+                      state.foodItems.add(FoodItemModel.create(foodItem));
                       Navigator.of(context).pop();
                     },
               child: Text("Create"),

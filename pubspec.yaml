@@ -38,7 +38,7 @@ dependencies:
 
   app_platform:
     path: ../platform/dart
-  app_platform_flutter:
+  flutter_app_platform:
     path: ../platform/flutter_pkg
 
   path_provider: ^2.1.4

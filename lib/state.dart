@@ -58,11 +58,11 @@ Future initAppState() async {
       stateJson = migrations[stateJson["version"]]!.apply(stateJson);
     }
     stateJson.remove("version"); // the version is not a part of the state
-    state = AppState.modelType.create(stateJson);
+    state = AppState.Type.create(stateJson);
   } catch (e) {
     // we dont want to override our state anymore...
     if (stateJson["version"] != null) rethrow;
-    state = AppState.modelType.create({
+    state = AppState.Type.create({
       "version": 1,
       "routines": [
         {

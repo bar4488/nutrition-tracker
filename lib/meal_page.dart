@@ -1,9 +1,9 @@
 import 'package:app_platform/app_platform.dart';
-import 'package:app_platform_flutter/widgets/computation.dart';
-import 'package:app_platform_flutter/widgets/dialogs.dart';
-import 'package:app_platform_flutter/widgets/dual_button.dart';
-import 'package:app_platform_flutter/widgets/model_view.dart';
-import 'package:app_platform_flutter/widgets/simple_tile.dart';
+import 'package:flutter_app_platform/widgets/computation.dart';
+import 'package:flutter_app_platform/widgets/dialogs.dart';
+import 'package:flutter_app_platform/widgets/dual_button.dart';
+import 'package:flutter_app_platform/widgets/model_view.dart';
+import 'package:flutter_app_platform/widgets/simple_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:nutrition_routine/main.dart';
 import 'package:nutrition_routine/models.dart';
@@ -29,10 +29,10 @@ class _MealPageState extends State<MealPage> {
 
     initialTotals = Computation(() {
       Map<String, double> totals = {};
-      for (var item in widget.meal.items.value
+      for (var item in widget.meal.items.list
           .where((v) => v.item.value != null)
           .map((v) => v.item.value!)) {
-        for (var entry in item.nutritionalValues.value.entries) {
+        for (var entry in item.nutritionalValues.map.entries) {
           totals[entry.key] =
               (totals[entry.key] ?? 0) + entry.value.amount.value;
         }
@@ -42,10 +42,10 @@ class _MealPageState extends State<MealPage> {
     totals = widget.meal.items.updates().map(
       (event) {
         Map<String, double> totals = {};
-        for (var item in widget.meal.items.value
+        for (var item in widget.meal.items.list
             .where((v) => v.item.value != null)
             .map((v) => v.item.value!)) {
-          for (var entry in item.nutritionalValues.value.entries) {
+          for (var entry in item.nutritionalValues.map.entries) {
             totals[entry.key] =
                 (totals[entry.key] ?? 0) + entry.value.amount.value;
           }
@@ -113,14 +113,14 @@ class _MealPageState extends State<MealPage> {
               onPressed1: () async {
                 Model? model = await showCreateModelDialog(
                   context,
-                  ModelType(
+                  StateModelType(
                     "Create food item",
                     [
-                      FieldType(
+                      StateFieldType(
                         "item",
-                        FoodItemModel.modelType,
+                        FoodItemModel.Type,
                       ),
-                      FieldType(
+                      StateFieldType(
                         "amount",
                         intType,
                       )
@@ -137,16 +137,16 @@ class _MealPageState extends State<MealPage> {
                       await showAlertDialog(
                         context,
                         "Food item already exists!",
-                        "choose an item with another name",
+                        subtitle: "choose an item with another name",
                       );
                     }
                     return;
                   }
-                  state.foodItems.createAndAdd(serialized["item"]);
-                  widget.meal.items.createAndAdd({
+                  state.foodItems.add(FoodItemModel.create(serialized["item"]));
+                  widget.meal.items.add(MealItemModel.create({
                     "amount": serialized["amount"],
                     "item": serialized["item"]["name"],
-                  });
+                  }));
                 }
               },
               child1: Icon(Icons.add),
@@ -174,15 +174,15 @@ class _MealPageState extends State<MealPage> {
                     await Future.delayed(Duration(milliseconds: 200));
                     if (context.mounted) {
                       await showAlertDialog(context, "Invalid amount!",
-                          "amount must be a number, not $amountStr");
+                          subtitle: "amount must be a number, not $amountStr");
                     }
                     return;
                   }
 
-                  widget.meal.items.createAndAdd({
+                  widget.meal.items.add(MealItemModel.create({
                     "amount": amount,
                     "item": model.name.value,
-                  });
+                  }));
                 }
               },
               child2: Icon(Icons.search),

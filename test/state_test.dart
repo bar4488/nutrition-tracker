@@ -2,7 +2,7 @@ import 'package:nutrition_routine/models.dart';
 
 void main() {
   var v = {};
-  AppState state = AppState.modelType.create({
+  AppState state = AppState.Type.create({
     "routines": [
       {
         "name": "routine a",

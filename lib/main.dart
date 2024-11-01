@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:app_platform/app_platform.dart';
-import 'package:app_platform_flutter/widgets/dialogs.dart';
-import 'package:app_platform_flutter/widgets/dual_button.dart';
-import 'package:app_platform_flutter/widgets/model_creator.dart';
-import 'package:app_platform_flutter/widgets/model_view.dart';
+import 'package:flutter_app_platform/widgets/dialogs.dart';
+import 'package:flutter_app_platform/widgets/dual_button.dart';
+import 'package:flutter_app_platform/widgets/model_creator.dart';
+import 'package:flutter_app_platform/widgets/model_view.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -118,7 +118,7 @@ class FoodItemsView extends StatelessWidget {
             onPressed1: () async {
               FoodItemModel? model = await showCreateModelDialog(
                 context,
-                FoodItemModel.modelType,
+                FoodItemModel.Type,
               );
 
               if (model != null) {
@@ -171,9 +171,9 @@ class FoodItemsView extends StatelessWidget {
                                 Timer(Duration(milliseconds: 200), () async {
                                   if (context.mounted) {
                                     await showAlertDialog(
-                                        context,
-                                        "Item not found!",
-                                        "item with barcode $barcode was not found!");
+                                        context, "Item not found!",
+                                        subtitle:
+                                            "item with barcode $barcode was not found!");
                                   }
                                 });
                                 Navigator.of(futureContext).pop("invalid");
@@ -213,16 +213,16 @@ class RoutinesView extends StatelessWidget {
               builder: (context, snapshot) {
                 return ListView.builder(
                   itemBuilder: (context, index) {
-                    if (index == state.routines.value.length) {
+                    if (index == state.routines.list.length) {
                       return TextButton(
                         onPressed: () async {
                           RoutineModel? model = await showDialog(
                             context: context,
                             builder: (context) {
                               return AlertDialog(
-                                title: Text(RoutineModel.modelType.name),
+                                title: Text(RoutineModel.Type.name),
                                 content: CreateModel(
-                                  modelType: RoutineModel.modelType,
+                                  modelType: RoutineModel.Type,
                                   onCreate: (model) {
                                     Navigator.of(context).pop(model);
                                   },
@@ -241,7 +241,7 @@ class RoutinesView extends StatelessWidget {
                         child: Icon(Icons.add),
                       );
                     }
-                    var routine = state.routines.value[index];
+                    var routine = state.routines.list[index];
                     return Card(
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
@@ -264,12 +264,12 @@ class RoutinesView extends StatelessWidget {
                             ),
                           ),
                           subtitle: Text(
-                              "number of meals: ${routine.meals.value.length}"),
+                              "number of meals: ${routine.meals.list.length}"),
                         ),
                       ),
                     );
                   },
-                  itemCount: state.routines.value.length + 1,
+                  itemCount: state.routines.list.length + 1,
                 );
               },
             ),
@@ -304,11 +304,11 @@ class RoutinePage extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 itemBuilder: (context, index) {
-                  if (index == routine.meals.value.length) {
+                  if (index == routine.meals.list.length) {
                     return TextButton(
                       onPressed: () async {
                         Model? model = await showCreateModelDialog(
-                            context, TimedMealModel.modelType);
+                            context, TimedMealModel.Type);
                         if (model != null) {
                           routine.meals.add(model as TimedMealModel);
                         }
@@ -316,7 +316,7 @@ class RoutinePage extends StatelessWidget {
                       child: Icon(Icons.add),
                     );
                   }
-                  var meal = routine.meals.value[index];
+                  var meal = routine.meals.list[index];
                   return Card(
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
@@ -340,7 +340,7 @@ class RoutinePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                                "number of items: ${meal.meal.items.value.length}"),
+                                "number of items: ${meal.meal.items.list.length}"),
                             Text("time: ${meal.time.value.format(context)}"),
                           ],
                         ),
@@ -348,7 +348,7 @@ class RoutinePage extends StatelessWidget {
                     ),
                   );
                 },
-                itemCount: routine.meals.value.length + 1,
+                itemCount: routine.meals.list.length + 1,
               ),
             )
           ]),
@@ -380,82 +380,21 @@ class FoodItemPage extends StatelessWidget {
         onPressed: () async {
           var model = await showCreateModelDialog(
             context,
-            ModelType("Nutritional value", [
-              FieldType("name", stringType),
-              FieldType("value", NutritionValueModel.modelType),
+            StateModelType("Nutritional value", [
+              StateFieldType("name", stringType),
+              StateFieldType("value", NutritionValueModel.Type),
             ]),
           );
           if (model != null) {
             var modelValues = model.serialize();
             item.nutritionalValues.add(
               modelValues["name"],
-              NutritionValueModel.modelType.create(modelValues["value"]),
+              NutritionValueModel.Type.create(modelValues["value"]),
             );
           }
         },
         child: Icon(Icons.add),
       ),
-    );
-    return StreamBuilder(
-      stream: item.updates(),
-      builder: (context, snapshot) {
-        var nutritionalValues = item.nutritionalValues.value.entries.toList();
-        return Scaffold(
-          appBar: AppBar(
-            title: Hero(
-              tag: tag,
-              child: Text(
-                item.name.value,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-          ),
-          body: Column(children: [
-            Text("Nutritional values:"),
-            Expanded(
-              child: ListView.builder(
-                itemBuilder: (context, index) {
-                  if (index == nutritionalValues.length) {
-                    return TextButton(
-                      onPressed: () async {
-                        var model = await showCreateModelDialog(
-                          context,
-                          ModelType("Nutritional value", [
-                            FieldType("name", stringType),
-                            FieldType("value", NutritionValueModel.modelType),
-                          ]),
-                        );
-                        if (model != null) {
-                          var modelValues = model.serialize();
-                          item.nutritionalValues.add(
-                            modelValues["name"],
-                            NutritionValueModel.modelType
-                                .create(modelValues["value"]),
-                          );
-                        }
-                      },
-                      child: Icon(Icons.add),
-                    );
-                  }
-                  var nutritionalValue = nutritionalValues[index];
-                  return Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: ListTile(
-                      title: Hero(
-                        tag: nutritionalValue,
-                        child: ItemNutritionValue(
-                          nutritionalValue: nutritionalValue,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                itemCount: nutritionalValues.length + 1,
-              ),
-            )
-          ]),
-        );
-      },
     );
   }
 }
