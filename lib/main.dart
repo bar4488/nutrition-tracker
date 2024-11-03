@@ -13,6 +13,8 @@ import 'package:nutrition_routine/models.dart';
 import 'package:nutrition_routine/shufersal/food_widget.dart';
 import 'package:nutrition_routine/shufersal/shufersal_sheli.dart';
 import 'package:nutrition_routine/state.dart';
+import 'package:nutrition_routine/view_models.dart';
+import 'package:nutrition_routine/views.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,15 +89,51 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-class FoodItemsView extends StatelessWidget {
+class FoodItemsView extends StatefulWidget {
   const FoodItemsView({
     super.key,
   });
 
   @override
+  State<FoodItemsView> createState() => _FoodItemsViewState();
+}
+
+class _FoodItemsViewState extends State<FoodItemsView> {
+  late SimpleListData foodItemsView;
+
+  static ListTransformation? _transformation;
+  static ListTransformation getTransformation() {
+    _transformation ??= ListTransformation(
+      SimpleTileData.transformation(
+        title: ChainTransformation([ExtractField(FoodItemModel.Type, "name")]),
+        subtitle: ChainTransformation([
+          ExtractField(FoodItemModel.Type, "nutritionalValues"),
+          MapValue((nutritionalValues) =>
+              "calories: ${nutritionalValues.get("calories")?.displayValue}")
+        ]),
+      ),
+    );
+    return _transformation!;
+  }
+
+  @override
+  void initState() {
+    // init food items view
+    foodItemsView = transformationFunc(state.foodItems);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    foodItemsView.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: ModelListPage(
+      child: SimpleListPage(
+        model: foodItemsView,
         title: stringType.create("All food items"),
         items: state.foodItems,
         itemTitle: (item) {

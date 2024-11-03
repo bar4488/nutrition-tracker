@@ -30,6 +30,8 @@ class NutritionValueModel extends Model {
 
 class FoodItemModel extends Model {
   StatePrimitive<String> name;
+  // StateList<>;
+  // TODO: change to list
   MapObject<NutritionValueModel> nutritionalValues;
   MapObject<StatePrimitive<String>> additionalValues;
 
@@ -107,13 +109,13 @@ class MealItemModel extends Model {
 
 class MealModel extends Model {
   StatePrimitive<String> name;
-  ListObject<MealItemModel> items;
+  StateList<MealItemModel> items;
 
   static final List<StateFieldType> Fields = [
     StateFieldType<StatePrimitive<String>>("name", stringType),
-    StateFieldType<ListObject<MealItemModel>>(
+    StateFieldType<StateList<MealItemModel>>(
       "items",
-      ListType<MealItemModel>(MealItemModel.Type),
+      StateListType<MealItemModel>(MealItemModel.Type),
       defaultValue: () => [],
     ),
   ];
@@ -126,7 +128,7 @@ class MealModel extends Model {
 
   MealModel.fromFields(super.fields, super.type)
       : name = fields[0] as StatePrimitive<String>,
-        items = fields[1] as ListObject<MealItemModel>;
+        items = fields[1] as StateList<MealItemModel>;
 }
 
 class TimedMealModel extends Model {
@@ -160,13 +162,13 @@ class TimedMealModel extends Model {
 
 class RoutineModel extends Model {
   StatePrimitive<String> name;
-  ListObject<TimedMealModel> meals;
+  StateList<TimedMealModel> meals;
 
   // boilerplate
   static final List<StateFieldType> Fields = [
-    StateFieldType<ListObject<TimedMealModel>>(
+    StateFieldType<StateList<TimedMealModel>>(
       "meals",
-      ListType<TimedMealModel>(TimedMealModel.Type),
+      StateListType<TimedMealModel>(TimedMealModel.Type),
       defaultValue: () => [],
     ),
     StateFieldType<StatePrimitive<String>>("name", stringType)
@@ -179,24 +181,24 @@ class RoutineModel extends Model {
   );
 
   RoutineModel.fromFields(super.fields, super.type)
-      : meals = fields[0] as ListObject<TimedMealModel>,
+      : meals = fields[0] as StateList<TimedMealModel>,
         name = fields[1] as StatePrimitive<String>;
 }
 
 class AppState extends Model {
-  ListObject<RoutineModel> routines;
-  ListObject<FoodItemModel> foodItems;
+  StateList<RoutineModel> routines;
+  StateList<FoodItemModel> foodItems;
 
   // boilerplate
   static final List<StateFieldType> Fields = [
-    StateFieldType<ListObject<RoutineModel>>(
+    StateFieldType<StateList<RoutineModel>>(
       "routines",
-      ListType<RoutineModel>(RoutineModel.Type),
+      StateListType<RoutineModel>(RoutineModel.Type),
       defaultValue: () => [],
     ),
-    StateFieldType<ListObject<FoodItemModel>>(
+    StateFieldType<StateList<FoodItemModel>>(
       "foodItems",
-      ListType<FoodItemModel>(FoodItemModel.Type),
+      StateListType<FoodItemModel>(FoodItemModel.Type),
       defaultValue: () => [],
     ),
   ];
@@ -208,6 +210,6 @@ class AppState extends Model {
   );
 
   AppState.fromFields(super.fields, super.type)
-      : routines = fields[0] as ListObject<RoutineModel>,
-        foodItems = fields[1] as ListObject<FoodItemModel>;
+      : routines = fields[0] as StateList<RoutineModel>,
+        foodItems = fields[1] as StateList<FoodItemModel>;
 }
